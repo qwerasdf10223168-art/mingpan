@@ -1,8 +1,8 @@
 services:
   - type: web
-    name: ziwel-mingpan-assistant
+    name: mingpan-assistant
     env: python
-    region: singapore
+    region: taiwan
     buildCommand: "pip install -r requirements.txt"
     startCommand: "python app.py"
     autoDeploy: true
