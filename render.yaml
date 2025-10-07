@@ -2,7 +2,7 @@ services:
   - type: web
     name: mingpan-assistant
     env: python
-    region: taiwan
+    region: Oregon (US West)
     buildCommand: "pip install -r requirements.txt"
     startCommand: "python app.py"
     autoDeploy: true
