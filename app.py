@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request
 import mingpan_logic as mp
 import markdown
+import os
 
 app = Flask(__name__)
 
@@ -22,4 +23,7 @@ def home():
     return render_template('index.html', result=result_html, raw_input=raw_input, year=year_input)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # ✅ Render 會自動給一個環境變數 PORT
+    port = int(os.environ.get('PORT', 5000))
+    # ✅ host 必須是 0.0.0.0 才能被 Render 偵測到
+    app.run(host='0.0.0.0', port=port, debug=False)
