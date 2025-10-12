@@ -22,6 +22,8 @@ def fetch_chart_selenium(year, month, day, hour, gender):
     """
     options = webdriver.ChromeOptions()
     options.add_argument("--headless")  # 不開視窗模式
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
     options.page_load_strategy = 'normal'
 
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
