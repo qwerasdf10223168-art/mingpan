@@ -4,7 +4,7 @@ save_data_on_exit = True
 save_history = True
 save_non_project_files = False
 project_type = 'empty-project-type'
-recent_files = ['app.py', 'mingpan_logic.py', 'requirements.txt']
+recent_files = ['app.py', 'mingpan_logic.py', 'requirements.txt', 'templates\\index.html', 'test_fetch_chart.py', 'test_chrome.py', 'D:\\anaconda3\\anaconda\\lib\\site-packages\\selenium\\webdriver\\support\\wait.py']
 
 [main]
 version = 0.2.0

@@ -567,3 +567,7 @@ def render_markdown_table_v7(data: dict, col_order: list, year_stem: str, raw_te
 # --- Module-friendly default for web integration ---
 if 'CYEAR' not in globals() or globals().get('CYEAR') is None:
     CYEAR = 2025
+
+# 避免被 Flask 匯入時自動執行
+if __name__ == "__main__":
+    print("此模組為命盤分析邏輯，請由 app.py 呼叫使用。")
