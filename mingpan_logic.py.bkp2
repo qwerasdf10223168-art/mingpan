@@ -567,23 +567,3 @@ def render_markdown_table_v7(data: dict, col_order: list, year_stem: str, raw_te
 # --- Module-friendly default for web integration ---
 if 'CYEAR' not in globals() or globals().get('CYEAR') is None:
     CYEAR = 2025
-
-# --- 預設輸出開關（避免 OUTPUT_SWITCH 未定義錯誤） ---
-if 'OUTPUT_SWITCH' not in globals():
-    OUTPUT_SWITCH = {
-        "DA_FOUR_HUA": {label: True for label in [
-            "命","兄","夫","子","財","疾","遷","僕","官","田","福","父"
-        ]},
-        "LIU_MING_FOUR_HUA": {
-            "YEAR_STEM_LINE": True,
-            "BRANCH_STEM_LINE": True,
-        },
-        "LIU_FOUR_HUA": {label: True for label in [
-            "命","兄","夫","子","財","疾","遷","僕","官","田","福","父"
-        ]},
-        "LIU_YUE": {
-            "MONTHS": list(range(1, 13)),  # 1~12 月皆啟用
-            "SHOW_PALACE_ROW": True,
-            "SHOW_HUA_ROW": True,
-        },
-    }
