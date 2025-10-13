@@ -1,83 +1,105 @@
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import Select
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from webdriver_manager.chrome import ChromeDriverManager
+import requests
+from bs4 import BeautifulSoup
 import re
 
-def fetch_chart_selenium(year, month, day, hour, gender):
-    options = Options()
-    # options.add_argument("--headless")  # 如需背景執行可啟用
-    options.page_load_strategy = 'normal'
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+def fetch_chart_requests(year, month, day, hour, gender):
+    print(f"⚙️ 抓取命盤：{year}-{month}-{day} {hour}h 性別={gender}")
 
-    try:
-        driver.set_page_load_timeout(60)
-        driver.get("https://fate.windada.com/cgi-bin/fate")
+    session = requests.Session()
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/129.0 Safari/537.36"
+        ),
+        "Referer": "https://fate.windada.com/cgi-bin/fate",
+    }
 
-        # 等頁面載入
-        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.NAME, "Sex")))
+    # Step 1️⃣: GET 首頁以獲取正確 form 結構
+    res = session.get("https://fate.windada.com/cgi-bin/fate", headers=headers, timeout=15)
+    res.raise_for_status()
+    soup = BeautifulSoup(res.text, "html.parser")
 
-        # 性別選擇
-        if gender.lower().startswith("m"):
-            driver.find_element(By.ID, "bMale").click()
-        else:
-            driver.find_element(By.ID, "bFemale").click()
+    form = soup.find("form")
+    if not form:
+        raise Exception("找不到表單 (<form>)")
 
-        # 年月日時
-        driver.find_element(By.NAME, "Year").send_keys(str(year))
-        Select(driver.find_element(By.ID, "bMonth")).select_by_value(str(month))
-        Select(driver.find_element(By.ID, "bDay")).select_by_value(str(day))
-        Select(driver.find_element(By.ID, "bHour")).select_by_value(str(hour))
+    action = form.get("action", "fate").strip()
+    print(f"🧩 表單 action: {action}")
 
-        # 送出查詢
-        driver.find_element(By.CSS_SELECTOR, 'input[type="submit"]').click()
+    # 建立要提交的 data（包含隱藏欄位）
+    data = {}
+    for inp in form.find_all("input"):
+        name = inp.get("name")
+        value = inp.get("value", "")
+        if name:
+            data[name] = value
 
-        # 等命盤主表格出現
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_all_elements_located((By.TAG_NAME, "table"))
-        )
+    # 手動補上使用者輸入的值
+    data["Sex"] = "1" if gender.lower().startswith("m") else "2"
+    data["Year"] = str(year)
+    data["Month"] = str(month)
+    data["Day"] = str(day)
+    data["Hour"] = str(hour)
+    data["Submit"] = "查詢命盤"
 
-        # 找到主要命盤表格（包含「命宮」字樣）
-        tables = driver.find_elements(By.TAG_NAME, "table")
-        main_table = None
-        for t in tables:
-            if "命宮" in t.text:
-                main_table = t
-                break
+    print("📦 最終送出資料：")
+    for k, v in data.items():
+        print(f"  {k} = {v}")
 
-        if not main_table:
-            raise Exception("找不到命盤主表格。")
+    # Step 2️⃣: 修正 action 路徑，組出正確 URL
+    if action.startswith("http"):
+        post_url = action
+    elif action.startswith("/"):
+        post_url = "https://fate.windada.com" + action
+    else:
+        post_url = "https://fate.windada.com/cgi-bin/" + action
 
-        # 擷取每個宮位文字
-        cells = main_table.find_elements(By.TAG_NAME, "td")
-        chart_data = []
-        for c in cells:
-            txt = c.text.strip()
-            if not txt:
-                continue
+    print(f"🚀 POST 目標網址：{post_url}")
 
-            # 去掉開頭的 07. / 8. / 09. 類型
+    response = session.post(post_url, data=data, headers=headers, timeout=30)
+    print("📡 狀態碼：", response.status_code)
+    response.raise_for_status()
+
+    # 儲存 HTML 方便檢查
+    with open("response_debug.html", "w", encoding="utf-8") as f:
+        f.write(response.text)
+
+    soup = BeautifulSoup(response.text, "html.parser")
+    title = soup.title.get_text() if soup.title else "(無標題)"
+    print(f"📄 頁面標題：{title}")
+    print("📜 頁面前 300 字：\n", soup.get_text()[:300])
+
+    tables = soup.find_all("table")
+    print(f"🔍 找到 {len(tables)} 個 <table>")
+
+    main_table = None
+    for t in tables:
+        if "命宮" in t.get_text():
+            main_table = t
+            break
+
+    if not main_table:
+        raise Exception("找不到命盤主表格")
+
+    # 擷取每個宮位
+    cells = main_table.find_all("td")
+    chart_data = []
+    for c in cells:
+        txt = c.get_text(strip=True)
+        if txt:
             txt = re.sub(r'^\d+\.\s*', '', txt)
             chart_data.append(txt)
 
-        # 直接印出乾淨命盤
-        print("✅ 命盤內容：\n")
-        for cell in chart_data:
-            print(cell)
-            print()  # 每宮之間空一行
+    print("✅ 命盤內容：\n")
+    for cell in chart_data:
+        print(cell)
+        print()
 
-        return chart_data
-
-    finally:
-        driver.quit()
+    return chart_data
 
 
 if __name__ == "__main__":
-    # 範例輸入
     year = 1991
     month = 7
     day = 24
@@ -85,6 +107,6 @@ if __name__ == "__main__":
     gender = "m"
 
     try:
-        fetch_chart_selenium(year, month, day, hour, gender)
+        fetch_chart_requests(year, month, day, hour, gender)
     except Exception as e:
         print(f"⚠️ 發生錯誤：{e}")
